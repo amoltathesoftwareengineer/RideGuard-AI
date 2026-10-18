@@ -1,15 +1,16 @@
 
 import streamlit as st
-import pandas as pd
+
+from src.risk_rules import assess_trip_risk
 
 st.set_page_config(
     page_title="RideGuard AI",
     page_icon="🚗",
-    layout="wide"
+    layout="wide",
 )
 
 st.title("🚗 RideGuard AI")
-st.write("Ride safety monitoring and trip risk analysis dashboard.")
+st.write("Rule-based trip safety analysis dashboard.")
 
 st.subheader("Enter Trip Details")
 
@@ -24,48 +25,29 @@ with col1:
     )
 
 with col2:
-    night_trip = st.selectbox(
-        "Night-time trip?", ["No", "Yes"]
-    )
-    incident_reported = st.selectbox(
-        "Incident reported?", ["No", "Yes"]
-    )
+    night_trip = st.selectbox("Night-time trip?", ["No", "Yes"])
+    incident = st.selectbox("Incident reported?", ["No", "Yes"])
 
 if st.button("Analyze Trip"):
-    risk_score = 0
-    reasons = []
-
-    if duration > 0 and distance / duration * 60 > 100:
-        risk_score += 2
-        reasons.append("High average speed based on entered trip details")
-
-    if night_trip == "Yes":
-        risk_score += 1
-        reasons.append("Night-time trip")
-
-    if incident_reported == "Yes":
-        risk_score += 2
-        reasons.append("An incident was reported")
-
-    if risk_score >= 3:
-        level = "Elevated"
-    elif risk_score >= 1:
-        level = "Moderate"
-    else:
-        level = "Low based on configured rules"
+    result = assess_trip_risk(
+        distance_km=distance,
+        duration_minutes=duration,
+        night_trip=(night_trip == "Yes"),
+        incident_reported=(incident == "Yes"),
+    )
 
     st.subheader("Trip Risk Summary")
-    st.metric("Rule-based score", risk_score)
-    st.write("**Indicator:**", level)
+    st.metric("Rule-based score", result["score"])
+    st.write("**Risk indicator:**", result["level"])
 
-    if reasons:
+    if result["reasons"]:
         st.write("**Triggered indicators:**")
-        for reason in reasons:
+        for reason in result["reasons"]:
             st.write(f"- {reason}")
     else:
         st.write("No configured indicators were triggered.")
 
-    st.caption(
+    st.warning(
         "Prototype only. This score does not guarantee safety "
         "and is not a substitute for emergency services."
     )
